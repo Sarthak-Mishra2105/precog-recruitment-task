@@ -533,6 +533,30 @@ Our experiments reveal that \textbf{debiasing $\neq$ adversarial robustness}: mo
 \end{enumerate}
 
 % ============================================================================
+% INTERACTIVE DEMO
+% ============================================================================
+\safesection{Interactive Demo}
+
+To bridge the gap between static evaluation and real-world usage, we developed an interactive Streamlit application that allows users to test models in real-time.
+
+\safesubsection{Features}
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Real-time Inference}: Users can draw digits on a canvas, which are preprocessed and fed to Cheater, Consistency, and GRL models simultaneously.
+    \item \textbf{Visualizing Bias}: The \textbf{Recolor Test} feature takes the user's drawn digit and systematically recolors it with all 10 dataset colors. The dashboard then displays predictions for each color, visually demonstrating whether a model is shape-invariant (consistent predictions) or color-biased (predictions change with color).
+    \item \textbf{Interpretability}: Grad-CAM visualizations are generated on-the-fly for the user's drawing, showing exactly where each model is looking.
+\end{enumerate}
+
+\safesubsection{Usage}
+
+The demo can be launched locally with a single command:
+\begin{lstlisting}[language=bash]
+streamlit run demo_app/app.py
+\end{lstlisting}
+
+This application serves as a powerful qualitative verification tool, complementing the quantitative metrics presented in Table~\ref{tab:debias_results}.
+
+
 % REPRODUCIBILITY
 % ============================================================================
 \safesection{Reproducibility}
