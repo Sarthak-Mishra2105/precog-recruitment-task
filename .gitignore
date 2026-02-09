@@ -1,0 +1,57 @@
+# Colored MNIST CV Task - .gitignore
+# ===================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Data (auto-downloaded, large)
+data/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.venv/
+venv/
+ENV/
+
+# Temp files
+*.log
+*.tmp
+*.bak
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+
+# Large model files (optional - uncomment if needed)
+# *.pt
+# *.pth
+
+# NOTE: artifacts/ is intentionally NOT ignored
+# We want to include saved models and figures as evidence

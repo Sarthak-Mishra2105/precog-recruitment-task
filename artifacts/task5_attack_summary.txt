@@ -1,0 +1,16 @@
+============================================================
+ADVERSARIAL ATTACK COMPARISON REPORT
+Target: 7 -> 3 with >90% confidence, eps < 0.05
+============================================================
+
+Model                | Before          | After           | Linf D   | Steps    | Success
+----------------------------------------------------------------------------------------
+Cheater              | 3(64%)          | 3(90%)          | 0.0500   | 6        | Y
+Consistency          | 7(100%)         | 3(92%)          | 0.0500   | 12       | Y
+GRL                  | 7(100%)         | 3(98%)          | 0.0500   | 8        | Y
+----------------------------------------------------------------------------------------
+
+Observations:
+  - Cheater: Attack SUCCEEDED in 6 steps
+  - Consistency: Attack SUCCEEDED in 12 steps
+  - GRL: Attack SUCCEEDED in 8 steps

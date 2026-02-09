@@ -1,0 +1,575 @@
+% ============================================================================
+% Colored MNIST CV Task - Technical Report
+% ============================================================================
+\documentclass[11pt,a4paper]{article}
+
+% --- Packages ---
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage{float}
+\usepackage[section]{placeins}  % Floats don't cross \section boundaries
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{needspace}  % Prevent orphan headings
+
+% --- Prevent vertical stretching (reduces whitespace) ---
+\raggedbottom
+
+% --- Fix header/footer spacing ---
+\setlength{\headheight}{14.5pt}
+\setlength{\footskip}{25pt}
+
+% --- Caption styling ---
+\captionsetup{font=small,labelfont=bf,skip=8pt}
+
+% --- Float tuning for better placement ---
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.9}
+\renewcommand{\textfraction}{0.1}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{2}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+
+% --- Configuration ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue
+}
+
+\graphicspath{{../artifacts/}}
+
+% --- Figure macros ---
+% Standard figure: reasonable size for side-by-side
+\newcommand{\safefig}[2]{%
+    \IfFileExists{../artifacts/#1}{%
+        \includegraphics[width=#2,height=0.38\textheight,keepaspectratio]{#1}%
+    }{%
+        \fbox{\parbox{#2}{\centering\vspace{0.3cm}Missing: #1\vspace{0.3cm}}}%
+    }%
+}
+
+% Large figure: for standalone important visualizations
+\newcommand{\safefigbig}[2]{%
+    \IfFileExists{../artifacts/#1}{%
+        \includegraphics[width=#2,height=0.5\textheight,keepaspectratio]{#1}%
+    }{%
+        \fbox{\parbox{#2}{\centering\vspace{0.3cm}Missing: #1\vspace{0.3cm}}}%
+    }%
+}
+
+% Full-page figure: for detailed visualizations that need to be readable
+\newcommand{\figfull}[2]{%
+    \IfFileExists{../artifacts/#1}{%
+        \includegraphics[width=0.95\textwidth,height=0.75\textheight,keepaspectratio]{#1}%
+    }{%
+        \fbox{\parbox{0.95\textwidth}{\centering\vspace{0.5cm}Missing: #1\vspace{0.5cm}}}%
+    }%
+}
+
+% --- Macro to prevent orphan headings ---
+\newcommand{\safesection}[1]{\needspace{8\baselineskip}\section{#1}}
+\newcommand{\safesubsection}[1]{\needspace{5\baselineskip}\subsection{#1}}
+
+% --- Header/Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Colored MNIST CV Task}
+\lhead{Technical Report}
+\rfoot{Page \thepage\ of \pageref{LastPage}}
+
+% --- Code listing style ---
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10}
+}
+
+% ============================================================================
+\begin{document}
+
+% --- Title ---
+\begin{center}
+    {\LARGE\bfseries Colored MNIST: Studying Shortcut Learning,\\Interpretability, and Debiasing}\\[0.4cm]
+    {\large Technical Report for CV Take-Home Assignment}\\[0.6cm]
+    
+    \begin{tabular}{rl}
+        \textbf{Author:} & (Candidate Submission) \\
+        \textbf{Date:} & February 2026 \\
+        \textbf{Repository:} & (Provided separately)
+    \end{tabular}
+\end{center}
+
+\vspace{0.5cm}
+
+% ============================================================================
+% PAGE 1: COMPLETION CHECKLIST (MANDATORY)
+% ============================================================================
+\section*{Task Completion Checklist}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|l|c|p{5.5cm}|}
+\hline
+\textbf{Task} & \textbf{Description} & \textbf{Status} & \textbf{Notes} \\
+\hline
+0 & Colored MNIST Dataset & \textcolor{green!70!black}{\textbf{DONE}} & 95\% correlation in train, 0\% in hard test \\
+\hline
+1 & Baseline CNN (Cheater) & \textcolor{green!70!black}{\textbf{DONE}} & Learns color shortcut, 6.25\% hard test \\
+\hline
+2 & Activation Maximization & \textcolor{green!70!black}{\textbf{DONE}} & From scratch with L2 + TV regularization \\
+\hline
+3 & Grad-CAM & \textcolor{green!70!black}{\textbf{DONE}} & From scratch (no external libraries) \\
+\hline
+4 & Debiasing Strategies & \textcolor{green!70!black}{\textbf{DONE}} & Consistency: 96.27\%, GRL: 92.77\% \\
+\hline
+5 & Adversarial Attacks & \textcolor{green!70!black}{\textbf{DONE}} & Targeted PGD, $\epsilon < 0.05$, $>$90\% conf \\
+\hline
+6 & Sparse Autoencoder (Bonus) & \textcolor{red}{\textbf{NOT DONE}} & Optional task not implemented \\
+\hline
+\end{tabular}
+\caption{Task completion status. All required tasks (0--5) completed successfully.}
+\label{tab:checklist}
+\end{table}
+
+\noindent\textbf{Key Results Summary:}
+\begin{itemize}[noitemsep,topsep=3pt]
+    \item \textbf{Baseline (Cheater)}: Easy Val $\approx$ 95\%, Hard Test $\approx$ 6.25\%
+    \item \textbf{Color Consistency}: Easy Val $\approx$ 97\%, Hard Test $\approx$ \textbf{96.27\%} (target: $>$70\%)
+    \item \textbf{GRL + Augmentation}: Easy Val $\approx$ 96\%, Hard Test $\approx$ \textbf{92.77\%} (target: $>$70\%)
+    \item \textbf{Adversarial Attack}: All models vulnerable to targeted PGD within $\epsilon = 0.05$
+\end{itemize}
+
+% ============================================================================
+% EXECUTIVE SUMMARY
+% ============================================================================
+\safesection{Executive Summary}
+
+This report documents a comprehensive study of \textbf{shortcut learning} in neural networks using a synthetic ``Colored MNIST'' dataset. The dataset introduces a strong spurious correlation between digit color and label during training, which breaks in the test set. We demonstrate:
+
+\begin{enumerate}[noitemsep,topsep=3pt]
+    \item \textbf{Shortcut Learning}: A baseline CNN trained on biased data achieves $>$95\% accuracy on in-distribution data but collapses to $\sim$6\% on out-of-distribution test data where the color-label correlation is broken.
+    \item \textbf{Interpretability}: Using Activation Maximization and Grad-CAM (both implemented from scratch), we visualize that the baseline model focuses on color rather than digit shape.
+    \item \textbf{Debiasing}: Two training strategies---\textbf{Color Consistency Loss} and \textbf{Gradient Reversal Layer (GRL)}---successfully recover robust performance ($>$92\% on hard test) without using grayscale images.
+    \item \textbf{Adversarial Robustness}: While debiased models are more robust to distribution shift, all models remain vulnerable to targeted adversarial attacks, though robust models require more attack iterations.
+\end{enumerate}
+
+% ============================================================================
+% TASK 0: DATASET
+% ============================================================================
+\safesection{Task 0: Colored MNIST Dataset}
+
+\safesubsection{Dataset Design}
+
+The Colored MNIST dataset extends the standard MNIST~\cite{lecun1998mnist} by introducing a \textbf{spurious correlation} between digit color and label. Each digit 0--9 is assigned a ``dominant'' color (0=Red, 1=Green, 2=Blue, 3=Yellow, 4=Magenta, 5=Cyan, 6=Orange, 7=Purple, 8=Dark Green, 9=Gray).
+
+\textbf{Split Statistics:}
+\begin{itemize}[noitemsep]
+    \item \textbf{Train/Validation}: 95\% of samples use the digit's dominant color (strong correlation).
+    \item \textbf{Hard Test}: 0\% use the dominant color---each digit is colored with one of the 9 \textit{other} colors (anti-correlated).
+\end{itemize}
+
+This creates a \textbf{distribution shift}: a model that learns the color shortcut will fail catastrophically on the hard test set. Images are RGB, $28 \times 28$, float32 in $[0, 1]$, with output format \texttt{(image, digit\_label, color\_id)}. Background uses smooth textured noise (not flat color). Implementation: \texttt{src/data\_colored\_mnist.py}.
+
+\safesubsection{Sample Visualizations}
+
+Figure~\ref{fig:dataset_samples} shows the distribution shift between training and test sets. Training samples exhibit strong color-digit correlation, while hard test samples deliberately break this correlation.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task0_samples_train.png}{\textwidth}
+    \caption{Training samples (biased): digits use dominant colors.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task0_samples_test.png}{\textwidth}
+    \caption{Hard test samples: digits use non-dominant colors.}
+\end{subfigure}
+\caption{Comparison of training (biased) vs. hard test (unbiased) samples. Note how each digit consistently appears in one color during training but different colors during testing.}
+\label{fig:dataset_samples}
+\end{figure}
+
+% ============================================================================
+% TASK 1: BASELINE CNN
+% ============================================================================
+\safesection{Task 1: Baseline ``Cheater'' CNN}
+
+\safesubsection{Training Setup and Results}
+
+To maximize shortcut learning, we train on a \textbf{small subset} (N=2000 samples) of the training data. This forces the model to find the simplest pattern---color---rather than learning digit shapes. The architecture is a simple CNN with 3 convolutional layers followed by 2 fully-connected layers, trained with Adam optimizer (LR=$10^{-3}$) for 5 epochs using cross-entropy loss.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Split} & \textbf{Accuracy} & \textbf{Interpretation} \\
+\midrule
+Easy Validation & $\sim$95\% & Color shortcut works \\
+Hard Test & $\sim$6.25\% & Color shortcut fails completely \\
+\bottomrule
+\end{tabular}
+\caption{Cheater baseline performance. Near-random hard test accuracy confirms shortcut learning~\cite{geirhos2020shortcut}.}
+\end{table}
+
+\safesubsection{Evidence: Confusion Matrix and Recolor Proof}
+
+The confusion matrix (Fig.~\ref{fig:task1_evidence}a) shows off-diagonal predictions, confirming the model predicts based on color rather than digit shape. The recolor proof (Fig.~\ref{fig:task1_evidence}b) provides definitive evidence: the same digit ``1'' is predicted as 10 different classes depending solely on its color. This demonstrates that the model has learned a mapping from color to class label rather than recognizing digit shapes.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \safefig{hard_test_confusion_cheater.png}{\textwidth}
+    \caption{Hard test confusion matrix showing color-based predictions.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.52\textwidth}
+    \centering
+    \safefig{task1_recolor_proof_digit1.png}{\textwidth}
+    \caption{Recolor proof: digit 1 predicted as 10 different classes.}
+\end{subfigure}
+\caption{Evidence of shortcut learning: (a) off-diagonal confusion confirms color-based predictions; (b) same digit predicted differently based solely on color.}
+\label{fig:task1_evidence}
+\end{figure}
+
+% ============================================================================
+% TASK 2: ACTIVATION MAXIMIZATION
+% ============================================================================
+\safesection{Task 2: Activation Maximization}
+
+\safesubsection{Method and Implementation}
+
+Activation maximization~\cite{erhan2009visualizing} generates synthetic inputs that maximally activate a chosen neuron or class logit. We optimize the input image $x$ via gradient ascent on:
+\begin{equation}
+x^* = \arg\max_x \, f_c(x) - \lambda_1 \|x\|_2^2 - \lambda_2 \, \text{TV}(x)
+\end{equation}
+where $f_c(x)$ is the logit for class $c$, $\|x\|_2^2$ is L2 regularization (prevents extreme pixel values), and $\text{TV}(x)$ is total variation regularization (promotes spatial smoothness).
+
+Our implementation initializes $x \sim \mathcal{U}(0.4, 0.6)$, performs gradient descent on the negative objective, and clamps pixel values to $[0,1]$ after each step. This is implemented from scratch without using any visualization libraries (see \texttt{src/interpretability.py}).
+
+\safesubsection{Results}
+
+Figure~\ref{fig:actmax} reveals what each class logit ``expects'' to see. Instead of digit shapes, the cheater model produces \textbf{solid color blobs}---each class logit is maximally activated by a specific color corresponding to that digit's dominant training color. This confirms the model has learned color features rather than shape features.
+
+\begin{figure}[htbp]
+\centering
+\safefigbig{task2_actmax_logits_cheater.png}{0.9\textwidth}
+\caption{Activation maximization for all 10 class logits. The cheater model produces \textbf{color blobs} rather than digit shapes, confirming it learned color features, not shape features.}
+\label{fig:actmax}
+\end{figure}
+
+% ============================================================================
+% TASK 3: GRAD-CAM
+% ============================================================================
+\safesection{Task 3: Grad-CAM}
+
+\safesubsection{Algorithm and Implementation}
+
+Grad-CAM~\cite{selvaraju2017gradcam} produces class-discriminative localization maps by weighting feature maps with gradient-derived importance scores:
+\begin{equation}
+L_{\text{Grad-CAM}}^c = \text{ReLU}\left( \sum_k \alpha_k^c A^k \right), \quad \alpha_k^c = \frac{1}{Z} \sum_{i,j} \frac{\partial y^c}{\partial A^k_{ij}}
+\end{equation}
+where $A^k$ is the $k$-th feature map from the target convolutional layer, $\alpha_k^c$ is the importance weight computed as the global average of gradients, and ReLU retains only positive contributions.
+
+Our from-scratch implementation registers forward hooks to capture activations and backward hooks to capture gradients at the target layer. We compute importance weights via global average pooling, weight the activations, apply ReLU, and upsample to input resolution. Implementation: \texttt{src/interpretability.py}.
+
+\safesubsection{Results on Easy Validation vs Hard Test}
+
+Figure~\ref{fig:gradcam_results} contrasts Grad-CAM visualizations between easy validation and hard test sets. On easy validation (left), the model correctly classifies digits, with attention focused on colored regions. On hard test (right), the model makes wrong predictions because it still focuses on color regions, but those colors no longer correlate with the true digit labels.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task3_gradcam_cheater_val.png}{\textwidth}
+    \caption{Easy validation: correct classifications.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task3_gradcam_cheater_test.png}{\textwidth}
+    \caption{Hard test: wrong predictions due to color attention.}
+\end{subfigure}
+\caption{Grad-CAM results comparing easy validation vs hard test. The model's attention pattern (color-focused) remains consistent, but predictions fail when colors no longer correlate with labels.}
+\label{fig:gradcam_results}
+\end{figure}
+
+\safesubsection{Recolor Sequence Analysis}
+
+Figure~\ref{fig:gradcam_recolor} demonstrates the color-dependency more directly: we recolor the same digit with all 10 colors and observe both predictions and attention maps. The attention pattern remains spatially similar (focused on the digit region), but predictions change based solely on color---proving the model uses color as its primary classification criterion.
+
+\begin{figure}[htbp]
+\centering
+\figfull{task3_gradcam_recolor_sequence.png}{Recolor sequence}
+\caption{Grad-CAM on same digit with different colors. Predictions change based on color while the spatial attention pattern remains similar, proving color-based decision making.}
+\label{fig:gradcam_recolor}
+\end{figure}
+
+% ============================================================================
+% TASK 4: DEBIASING
+% ============================================================================
+\safesection{Task 4: Debiasing Strategies}
+
+\textbf{Constraint}: Solutions must NOT convert images to grayscale and must NOT change the dataset generation rules. All debiasing must be done via training objectives, architecture, or augmentation.
+
+\safesubsection{Strategy 1: Color Consistency Training}
+
+The key insight is that if a model truly learns digit shape, its predictions should remain consistent when we recolor the same digit. We enforce this by adding a consistency loss:
+
+\textbf{Loss Function:}
+\begin{equation}
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{CE}}(f(x), y) + \lambda_{\text{cons}} \cdot D_{\text{KL}}^{\text{sym}}(f(x) \| f(x'))
+\end{equation}
+where $x$ is the original image, $x'$ is a recolored version, $D_{\text{KL}}^{\text{sym}} = \frac{1}{2}(D_{\text{KL}}(p \| q) + D_{\text{KL}}(q \| p))$ is symmetric KL divergence, and $\lambda_{\text{cons}} = 2.0$.
+
+During training, we recolor each image to a random color and penalize prediction differences between the original and recolored versions. This forces the model to produce color-invariant representations. Implementation: \texttt{src/debias.py}.
+
+\safesubsection{Strategy 2: Gradient Reversal Layer (GRL)}
+
+Domain-adversarial training~\cite{ganin2016domain} learns features that are invariant to a nuisance variable (color) by adversarially training a classifier on that variable. The architecture has a shared backbone feeding into both a digit classifier and a color classifier, with a Gradient Reversal Layer before the color classifier.
+
+The GRL reverses gradients during backpropagation: $\text{GRL}(x) = x$ in forward pass, but $\frac{\partial}{\partial x} = -\lambda_{\text{grl}} \cdot \frac{\partial}{\partial \text{GRL}(x)}$ in backward pass. This forces the backbone to produce features that \textbf{cannot} predict color while still predicting digits correctly. We enhance GRL by training on \textbf{recolored} images, exposing the model to all color-digit combinations. Implementation: \texttt{src/debias.py}.
+
+\safesubsection{Results Comparison}
+
+Both debiasing strategies dramatically improve hard test performance while maintaining high accuracy on easy validation:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Model} & \textbf{Easy Val} & \textbf{Hard Test} & \textbf{Target ($>$70\%)} \\
+\midrule
+Cheater Baseline & $\sim$95\% & 6.25\% & --- \\
+Color Consistency & $\sim$97\% & \textbf{96.27\%} & \textcolor{green!70!black}{\checkmark} \\
+GRL + Augmentation & $\sim$96\% & \textbf{92.77\%} & \textcolor{green!70!black}{\checkmark} \\
+\bottomrule
+\end{tabular}
+\caption{Debiasing results. Both strategies exceed the 70\% hard test target while maintaining high easy validation accuracy.}
+\label{tab:debias_results}
+\end{table}
+
+\safesubsection{Training Curves}
+
+Figure~\ref{fig:training_curves} shows the training dynamics. Both methods converge smoothly, with the consistency loss helping regularize training.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_consistency_curves.png}{\textwidth}
+    \caption{Color Consistency training.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_grl_curves.png}{\textwidth}
+    \caption{GRL + Augmentation training.}
+\end{subfigure}
+\caption{Training curves for both debiasing strategies showing loss and accuracy progression.}
+\label{fig:training_curves}
+\end{figure}
+
+\safesubsection{Confusion Matrices}
+
+Figure~\ref{fig:debias_confmat} shows confusion matrices on the hard test set. Unlike the cheater model's scattered off-diagonal predictions, both debiased models show strong diagonal structure, indicating correct classification regardless of color.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_consistency_confmat.png}{\textwidth}
+    \caption{Consistency model (96.27\% accuracy).}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_grl_confmat.png}{\textwidth}
+    \caption{GRL model (92.77\% accuracy).}
+\end{subfigure}
+\caption{Hard test confusion matrices for debiased models. Strong diagonal indicates correct classification regardless of color.}
+\label{fig:debias_confmat}
+\end{figure}
+
+\safesubsection{Recolor Invariance Proofs}
+
+Figure~\ref{fig:recolor_proofs} demonstrates true color invariance: both debiased models correctly classify the same digit across all 10 colors (10/10 correct), unlike the cheater model which predicted 10 different classes.
+
+\begin{figure}[htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_recolor_consistency_digit1.png}{\textwidth}
+    \caption{Consistency: Digit 1 in all colors.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+    \centering
+    \safefig{task4_recolor_grl_digit1.png}{\textwidth}
+    \caption{GRL: Digit 1 in all colors.}
+\end{subfigure}
+\caption{Recolor invariance proofs: both models correctly classify digit 1 in all 10 colors (10/10 correct).}
+\label{fig:recolor_proofs}
+\end{figure}
+
+\safesubsection{Grad-CAM Comparison Across Models}
+
+Figure~\ref{fig:gradcam_compare} compares attention patterns across Cheater, Consistency, and GRL models on the same hard test sample. While the cheater focuses on color regions, the debiased models attend more to digit shape features.
+
+\begin{figure}[htbp]
+\centering
+\figfull{task4_gradcam_compare_0.png}{Grad-CAM comparison}
+\caption{Grad-CAM comparison: Cheater vs Consistency vs GRL on the same hard test sample. Debiased models show more shape-focused attention patterns.}
+\label{fig:gradcam_compare}
+\end{figure}
+
+% ============================================================================
+% TASK 5: ADVERSARIAL ATTACKS
+% ============================================================================
+\safesection{Task 5: Targeted Adversarial Attack}
+
+\safesubsection{Problem Setup}
+
+We implement a targeted adversarial attack to test model robustness beyond distribution shift. The goal is to generate an adversarial example that causes a model to predict class 3 (Yellow's dominant digit) when shown a digit 7 (Purple's dominant digit), with:
+\begin{itemize}[noitemsep]
+    \item Target confidence: $>$90\%
+    \item Perturbation constraint: $\|x_{\text{adv}} - x\|_\infty < 0.05$ (inputs in $[0,1]$)
+\end{itemize}
+
+\safesubsection{Targeted PGD Algorithm}
+
+Projected Gradient Descent (PGD)~\cite{madry2018towards} is an iterative attack that perturbs the input to minimize loss with respect to the target class. Our implementation:
+
+\begin{enumerate}[noitemsep]
+    \item Initialize: $x_{\text{adv}} = x + \delta$ where $\delta \sim \mathcal{U}(-\epsilon, \epsilon)$
+    \item Iterate: compute gradient $g = \nabla_x \mathcal{L}_{\text{CE}}(f(x_{\text{adv}}), y_{\text{target}})$
+    \item Update: $x_{\text{adv}} = x_{\text{adv}} - \alpha \cdot \text{sign}(g)$
+    \item Project: clip to $L_\infty$ ball around original and valid pixel range $[0,1]$
+    \item Early stop if target confidence $>$ 0.90
+\end{enumerate}
+
+Implementation: \texttt{src/attacks.py}.
+
+\safesubsection{Results}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Model} & \textbf{Before} & \textbf{After} & \textbf{$L_\infty$ $\Delta$} & \textbf{Steps} & \textbf{Success} \\
+\midrule
+Cheater & 3 (64\%) & 3 (90\%) & 0.0500 & 6 & \textcolor{green!70!black}{Yes} \\
+Consistency & 7 (100\%) & 3 (92\%) & 0.0500 & 12 & \textcolor{green!70!black}{Yes} \\
+GRL & 7 (100\%) & 3 (98\%) & 0.0500 & 8 & \textcolor{green!70!black}{Yes} \\
+\bottomrule
+\end{tabular}
+\caption{Adversarial attack results. All models are vulnerable, but robust models require more steps.}
+\label{tab:attack_results}
+\end{table}
+
+\textbf{Key observations:}
+\begin{itemize}[noitemsep]
+    \item The Cheater model was already misclassifying (predicted 3 at 64\%)---the attack only needed to increase confidence.
+    \item The Consistency model required the most steps (12)---most robust to adversarial perturbation.
+    \item GRL required 8 steps---moderately robust.
+    \item All attacks succeeded within the $\epsilon = 0.05$ constraint.
+\end{itemize}
+
+\safesubsection{Attack Visualizations}
+
+Figure~\ref{fig:attack_comparison} shows the attack results for all three models. The perturbations are visually imperceptible (amplified 10$\times$ in the last column for visibility), yet sufficient to fool all models with high confidence.
+
+\begin{figure}[htbp]
+\centering
+\figfull{task5_attack_comparison.png}{Attack comparison}
+\caption{Targeted PGD attack comparison. Columns: Original, Adversarial, Delta, Amplified Delta ($\times 10$). Perturbations are visually imperceptible but sufficient to achieve $>$90\% target confidence.}
+\label{fig:attack_comparison}
+\end{figure}
+
+% ============================================================================
+% DISCUSSION
+% ============================================================================
+\safesection{Discussion and Takeaways}
+
+\safesubsection{On Shortcut Learning}
+
+Neural networks readily exploit spurious correlations when they provide easier paths to minimize training loss. In our experiments, training on a small subset (N=2000) exacerbated shortcut learning by limiting exposure to diverse patterns. Interpretability tools (Grad-CAM, Activation Maximization) proved essential for diagnosing these shortcuts---without them, the 95\% validation accuracy would have masked the underlying problem.
+
+\safesubsection{On Debiasing}
+
+Color Consistency achieved the best hard test accuracy (96.27\%) by directly enforcing prediction invariance across color augmentations. GRL provides a more principled adversarial approach that removes color information from learned representations. Both methods preserve high accuracy on in-distribution data while dramatically improving out-of-distribution performance. Key insight: data augmentation combined with appropriate training objectives is sufficient---no need to remove color information from the input entirely.
+
+\safesubsection{On Adversarial Robustness}
+
+Our experiments reveal that \textbf{debiasing $\neq$ adversarial robustness}: models robust to distribution shift (color changes) are still vulnerable to adversarial attacks. However, debiased models are \textit{harder} to attack (require more iterations), suggesting some transfer of robustness. The Cheater model's apparent ``vulnerability'' was actually masked by its existing misclassification---a reminder to carefully interpret adversarial robustness evaluations.
+
+\safesubsection{Recommendations}
+
+\begin{enumerate}[noitemsep]
+    \item Always evaluate on out-of-distribution test sets when spurious correlations are possible.
+    \item Use interpretability tools during development to catch shortcut learning early.
+    \item Combine multiple debiasing strategies for robust models.
+    \item Remember that adversarial robustness requires separate treatment from distributional robustness.
+\end{enumerate}
+
+% ============================================================================
+% REPRODUCIBILITY
+% ============================================================================
+\safesection{Reproducibility}
+
+\safesubsection{Repository Structure}
+
+\begin{lstlisting}
+colored-mnist-cv-task/
+|-- notebooks/cv_task.ipynb    # Main notebook (all tasks)
+|-- src/                       # Core modules
+|-- artifacts/                 # Saved models and figures
+|-- scripts/smoke_test.py      # Quick sanity check
+|-- run_all.py                 # Quickstart runner
+|-- requirements.txt           # Dependencies
+\end{lstlisting}
+
+\safesubsection{Running the Code}
+
+\textbf{Quick Verification:}
+\begin{lstlisting}[language=bash]
+python run_all.py --mode load_artifacts  # Check artifacts
+python scripts/smoke_test.py             # Smoke test (<1 min)
+\end{lstlisting}
+
+\textbf{Full Regeneration:}
+\begin{lstlisting}[language=bash]
+python run_all.py --mode run_from_scratch  # ~20 min on CPU
+\end{lstlisting}
+
+\safesubsection{Notes}
+
+MNIST data auto-downloads on first run ($\sim$11 MB). GPU is optional but speeds up training 2--5$\times$. All experiments use fixed random seed (42) for reproducibility.
+
+% ============================================================================
+% REFERENCES
+% ============================================================================
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
